@@ -1,35 +1,45 @@
 package checker
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 )
 
-type Config struct {
-	Name string `json:"name"`
-	Link string `json:"string"`
-}
-
 func LoadConfig(filename string) ([]string, error) {
-	file, err := os.Open(filename)
+	config, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	defer file.Close()
+	c := make(map[string]json.RawMessage)
 
-	scanner := bufio.NewScanner(file)
-
-	var links []string
-	for scanner.Scan() {
-		links = append(links, scanner.Text())
+	err = json.Unmarshal(config, &c)
+	if err != nil {
+		fmt.Println(err)
 	}
+
+	var links = []string{}
+
+	for _, v := range c {
+		links = append(links, string(v))
+	}
+
 	return links, nil
 }
 
+func extractValue(body string, key string) string {
+	keystr := "\"" + key + "\":[^,;\\]}]*"
+	r, _ := regexp.Compile(keystr)
+	match := r.FindString(body)
+	keyValMatch := strings.Split(match, ":")
+	return strings.ReplaceAll(keyValMatch[1], "\"", "")
+}
+
 func GetLinks() []string {
-	links, err := LoadConfig("./config/config.dat")
+	links, err := LoadConfig("config.json")
 	if err != nil {
 		fmt.Println("can't get links")
 	}
